@@ -1,19 +1,41 @@
 package de.buw.fm4se;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.CommandScope;
+import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Options;
+import edu.mit.csail.sdg.translator.A4Solution;
+import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 public class AlloyChecker {
 
 	public static List<String> findDeadSignatures(String fileName, A4Options options, A4Reporter rep) {
-		// TODO Task 1
-		return null;
+		List<String> deadSignatures = new ArrayList<>();
+		Module world = CompUtil.parseEverything_fromFile(rep, null, fileName);
+		options.solver = A4Options.SatSolver.SAT4J;
+
+		for (Command command : world.getAllCommands()) {
+			A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, options);
+			if (ans.satisfiable()) {
+				Iterator<Sig> ite = world.getAllSigs().iterator();
+				while (ite.hasNext()) {
+					Sig sig = (Sig) ite.next();
+					Integer numAtomsSignature = ans.eval(sig).size();
+					if (numAtomsSignature == null || numAtomsSignature.intValue() == 0) {
+						deadSignatures.add(sig.label);
+					}
+				}
+			}
+		}
+		return deadSignatures;
 	}
 
 	public static List<String> findCoreSignatures(String fileName, A4Options options, A4Reporter rep) {
@@ -40,7 +62,7 @@ public class AlloyChecker {
 	/**
 	 * Computes the maximum scope for a signature in a command. This is either the
 	 * default of 4, the overall scope, or the specific scope for the signature in
-	 * the command. 
+	 * the command.
 	 * 
 	 * @param sig
 	 * @param cmd
