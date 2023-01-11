@@ -18,6 +18,7 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 public class AlloyChecker {
 
 	public static List<String> findDeadSignatures(String fileName, A4Options options, A4Reporter rep) {
+		
 		List<String> deadSignatures = new ArrayList<>();
 		Module world = CompUtil.parseEverything_fromFile(rep, null, fileName);
 		options.solver = A4Options.SatSolver.SAT4J;
