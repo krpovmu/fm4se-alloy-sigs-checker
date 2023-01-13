@@ -23,8 +23,9 @@ public class AlloyChecker {
 		Module world = CompUtil.parseEverything_fromFile(rep, null, fileName);
 		options.solver = A4Options.SatSolver.SAT4J;
 
-		// create a map where I'll keep the sum of the all signatures in all instances
-		// if the sum in all instances is zero that means signature is dead
+		// create a map where I'll keep the sum of the atoms in all signatures in all
+		// instances if the sum in all instances of the signature is zero that means 
+		// signature is dead.
 		Map<String, Integer> mapSumSignaturePerInstance = new HashMap<>();
 
 		// execute command run or check depending the als file
@@ -53,12 +54,11 @@ public class AlloyChecker {
 				instance = instance.next();
 			}
 		}
-		// after scroll through all instances check the instances in zero and add to the
+		// after scroll through all instances check the signatures in zero and add to the
 		// deadsignatures list
 		for (Map.Entry<String, Integer> entry : mapSumSignaturePerInstance.entrySet()) {
 			String nameSignature = entry.getKey();
 			Integer sumSignature = entry.getValue();
-
 			if (sumSignature == 0) {
 				deadSignatures.add(nameSignature);
 			}
