@@ -2,6 +2,7 @@ package de.buw.fm4se;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +15,7 @@ import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
+import edu.mit.csail.sdg.translator.A4Tuple;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 public class AlloyChecker {
@@ -24,7 +26,7 @@ public class AlloyChecker {
 		options.solver = A4Options.SatSolver.SAT4J;
 
 		// create a map where I'll keep the sum of the atoms in all signatures in all
-		// instances if the sum in all instances of the signature is zero that means 
+		// instances if the sum in all instances of the signature is zero that means
 		// signature is dead.
 		Map<String, Integer> mapSumSignaturePerInstance = new HashMap<>();
 
@@ -54,8 +56,9 @@ public class AlloyChecker {
 				instance = instance.next();
 			}
 		}
-		// after scroll through all instances check the signatures in zero and add to the
-		// deadsignatures list
+		// after scroll through all instances check the signatures in zero and add to
+		// the
+		// dead signatures list
 		for (Map.Entry<String, Integer> entry : mapSumSignaturePerInstance.entrySet()) {
 			String nameSignature = entry.getKey();
 			Integer sumSignature = entry.getValue();
@@ -111,9 +114,36 @@ public class AlloyChecker {
 	 * @return map from signature names to minimum scopes
 	 */
 	public static Map<String, Integer> findMinScope(String fileName, A4Options options, A4Reporter rep) {
-		// TODO Task 3
-		return null;
+		Map<String, Integer> minScopePerSignature = new HashMap<>();
+		Module world = CompUtil.parseEverything_fromFile(rep, null, fileName);
+		for (Command command : world.getAllCommands()) {
+			A4Solution instance = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command,
+					options);
 
+			int maxScopeSignature = 0;
+			ConstList<Sig> sigUser = world.getAllReachableUserDefinedSigs();
+			for (int i = 0; i < sigUser.size(); i++) {
+				maxScopeSignature = getMaxScope(sigUser.get(i), command);
+				minScopePerSignature.put(sigUser.get(i).label, maxScopeSignature);
+			}
+			while (instance.satisfiable()) {
+				for (int i = 0; i < sigUser.size(); i++) {
+					maxScopeSignature = getMaxScope(sigUser.get(i), command);
+					if (instance.eval(sigUser.get(i)).size() < minScopePerSignature.get(sigUser.get(i).label)) {
+						minScopePerSignature.put(sigUser.get(i).label, instance.eval(sigUser.get(i)).size());
+					}
+					Iterator<A4Tuple> atomsIterator = instance.eval(sigUser.get(i)).iterator();
+					List<String> atoms = new ArrayList<>();
+					while (atomsIterator.hasNext()) {
+						atoms.add(atomsIterator.next().sig(0).label);
+					}
+					if (!atoms.contains(sigUser.get(i).label))
+						minScopePerSignature.put(sigUser.get(i).label, 0);
+				}
+				instance = instance.next();
+			}
+		}
+		return minScopePerSignature;
 	}
 
 	/**
